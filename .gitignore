@@ -1,0 +1,7 @@
+/build/
+/reports/
+/uploads/
+.cache/
+*.o
+*.a
+.DS_Store

@@ -1,0 +1,335 @@
+# Manual high-signal cases for the horizontal leftover pass.
+# Isolated singles and isolated adjacent doubles are supposed to PASS (DPC).
+# They should be recorded only when they connect to a neighboring cluster.
+#
+# Legend: '.' good pixel, 'X' dead pixel. Width must be a multiple of 4.
+# Pack bits in each group of 4: pos0 pos1 pos2 pos3.
+
+# ---------------------------------------------------------------------------
+# Isolated leftovers — both algorithms should record nothing (DPC).
+# ---------------------------------------------------------------------------
+
+CASE isolated_single_pos0
+NOTE DPC: one leftover single, no neighbor cluster
+W 16
+H 3
+MAP
+................
+X...............
+................
+END
+
+CASE isolated_single_pos2
+NOTE DPC: one leftover single
+W 16
+H 3
+MAP
+................
+..X.............
+................
+END
+
+CASE isolated_adjacent_1100
+NOTE DPC: adjacent double 0b1100, skipped in cluster phase on purpose
+W 16
+H 3
+MAP
+................
+XX..............
+................
+END
+
+CASE isolated_adjacent_0110
+NOTE DPC: adjacent double 0b0110
+W 16
+H 3
+MAP
+................
+.XX.............
+................
+END
+
+CASE isolated_adjacent_0011
+NOTE DPC: adjacent double 0b0011
+W 16
+H 3
+MAP
+................
+..XX............
+................
+END
+
+CASE two_singles_same_channel_across_boundary
+NOTE DPC: two singles at distance 2 (pos2 | pos0). Same geometry as intra-group
+NOTE 0b1010, but split across packs — each is still a DPC single. Must PASS.
+W 16
+H 3
+MAP
+................
+..X.X...........
+................
+END
+
+# ---------------------------------------------------------------------------
+# Phase-2 intra-pack clusters — both should record.
+# ---------------------------------------------------------------------------
+
+CASE cluster_1010
+NOTE intra-pack same-channel pair 0b1010
+W 16
+H 3
+MAP
+................
+X.X.............
+................
+END
+
+CASE cluster_0101
+NOTE intra-pack same-channel pair 0b0101
+W 16
+H 3
+MAP
+................
+.X.X............
+................
+END
+
+CASE cluster_1001
+NOTE intra-pack non-adjacent 0b1001
+W 16
+H 3
+MAP
+................
+X..X............
+................
+END
+
+# ---------------------------------------------------------------------------
+# Single + neighboring cluster — original intent, incomplete type tables.
+# ---------------------------------------------------------------------------
+
+CASE single_pos0_plus_cluster_1010
+NOTE leftover pos0 looks left at cluster 0b1010 (has pos2). Control should catch.
+W 16
+H 3
+MAP
+................
+X.X.X...........
+................
+END
+
+CASE single_pos1_plus_cluster_0101
+NOTE leftover pos1 looks left at cluster 0b0101 (has pos3). Control should catch.
+W 16
+H 3
+MAP
+................
+.X.X.X..........
+................
+END
+
+CASE single_pos1_plus_cluster_1001
+NOTE BUG: leftover pos1 + left cluster 0b1001. type_0100 omitted 0b1001.
+W 16
+H 3
+MAP
+................
+X..X.X..........
+................
+END
+
+CASE single_pos2_plus_cluster_1010
+NOTE leftover pos2 looks right at cluster 0b1010 (has pos0). Control should catch.
+W 16
+H 3
+MAP
+................
+..X.X.X.........
+................
+END
+
+CASE single_pos2_plus_cluster_1001
+NOTE leftover pos2 + right cluster 0b1001 (has pos0)
+W 16
+H 3
+MAP
+................
+..X.X..X........
+................
+END
+
+CASE single_pos3_plus_cluster_0101
+NOTE leftover pos3 looks right at cluster 0b0101 (has pos1)
+W 16
+H 3
+MAP
+................
+...X.X.X........
+................
+END
+
+CASE single_pos0_at_left_edge_plus_nothing
+NOTE first pack cannot look left; isolated single
+W 16
+H 3
+MAP
+................
+X...............
+................
+END
+
+# ---------------------------------------------------------------------------
+# Adjacent-double leftover + neighboring cluster — never inspected (sum!=255).
+# This is the main hole: the adjacent-double PASS did not consider complex
+# patterns formed with a neighboring cluster.
+# ---------------------------------------------------------------------------
+
+CASE adj_1100_right_of_cluster_1010
+NOTE cluster 0b1010 | leftover 0b1100. Boundary: cluster pos2 + adj pos0.
+W 16
+H 3
+MAP
+................
+X.X.XX..........
+................
+END
+
+CASE adj_1100_right_of_cluster_1001
+NOTE cluster 0b1001 | leftover 0b1100. Boundary: cluster pos3 + adj pos1.
+W 16
+H 3
+MAP
+................
+X..XXX..........
+................
+END
+
+CASE adj_0011_left_of_cluster_1010
+NOTE leftover 0b0011 | cluster 0b1010. Boundary: adj pos2 + cluster pos0.
+W 16
+H 3
+MAP
+................
+..XXX.X.........
+................
+END
+
+CASE adj_0011_left_of_cluster_1001
+NOTE leftover 0b0011 | cluster 0b1001
+W 16
+H 3
+MAP
+................
+..XXX..X........
+................
+END
+
+CASE adj_0110_right_of_cluster_1001
+NOTE cluster 0b1001 | leftover 0b0110. pos3 + pos1 same channel.
+W 16
+H 3
+MAP
+................
+X..X.XX.........
+................
+END
+
+CASE adj_0110_left_of_cluster_1010
+NOTE leftover 0b0110 | cluster 0b1010. pos2 + pos0 same channel.
+W 16
+H 3
+MAP
+................
+.XX.X.X.........
+................
+END
+
+CASE adj_1110_right_of_cluster_1010
+NOTE triple leftover (has adjacent pairs, skipped) next to cluster
+W 16
+H 3
+MAP
+................
+X.X.XXX.........
+................
+END
+
+# Two passed adjacent-doubles that connect — together they are no longer DPC-simple.
+CASE adj_0011_plus_adj_1100
+NOTE leftover 0b0011 | leftover 0b1100, connected at the boundary
+W 16
+H 3
+MAP
+................
+..XXXX..........
+................
+END
+
+# Single next to a passed adjacent-double (the double is a 2-defect cluster).
+CASE single_pos2_plus_adj_1100
+NOTE leftover pos2 | leftover 0b1100. Union has 3 defects.
+W 16
+H 3
+MAP
+................
+..X.XX..........
+................
+END
+
+CASE adj_0011_plus_single_pos0
+NOTE leftover 0b0011 | leftover pos0. Union has 3 defects.
+W 16
+H 3
+MAP
+................
+..XXX...........
+................
+END
+
+# ---------------------------------------------------------------------------
+# Edge / empty / vertical (must not regress).
+# ---------------------------------------------------------------------------
+
+CASE empty
+NOTE no defects
+W 16
+H 3
+MAP
+................
+................
+................
+END
+
+CASE vertical_diag_pair
+NOTE original vertical rule: (r,c) with (r+1,c+1)
+W 16
+H 5
+MAP
+................
+....X...........
+.....X..........
+................
+................
+END
+
+CASE vertical_plus2_same_col
+NOTE original vertical rule: (r,c) with (r+2,c)
+W 16
+H 5
+MAP
+................
+....X...........
+................
+....X...........
+................
+END
+
+CASE big_dd_same_channel_four
+NOTE same-channel 4-in-a-row should early-return
+W 16
+H 3
+MAP
+................
+X.X.X.X.........
+................
+END
