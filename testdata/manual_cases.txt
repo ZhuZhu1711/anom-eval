@@ -1,6 +1,8 @@
 # Manual high-signal cases for the horizontal leftover pass.
 # Isolated singles and isolated adjacent doubles are supposed to PASS (DPC).
-# They should be recorded only when they connect to a neighboring cluster.
+# They must be recorded when they same-channel-connect across a pack boundary
+# (to a cluster, leftover double, or another leftover single): DPC prefers
+# the same-channel good pixel on the left, and that source is then dead.
 #
 # Legend: '.' good pixel, 'X' dead pixel. Width must be a multiple of 4.
 # Pack bits in each group of 4: pos0 pos1 pos2 pos3.
@@ -59,14 +61,39 @@ MAP
 ................
 END
 
+CASE two_singles_not_same_channel
+NOTE DPC: two singles, not same-channel d=2 across the boundary. Must PASS.
+W 16
+H 3
+MAP
+................
+..X..X..........
+................
+END
+
+# ---------------------------------------------------------------------------
+# Two leftover singles, same-channel d=2 across the boundary.
+# Geometry equals intra-pack 0b1010 / 0b0101: DPC cannot use the left source.
+# Both packs must be recorded. Control often records only the left pack.
+# ---------------------------------------------------------------------------
+
 CASE two_singles_same_channel_across_boundary
-NOTE DPC: two singles at distance 2 (pos2 | pos0). Same geometry as intra-group
-NOTE 0b1010, but split across packs — each is still a DPC single. Must PASS.
+NOTE pos2 | pos0. Split-pack 0b1010. Must record both packs.
 W 16
 H 3
 MAP
 ................
 ..X.X...........
+................
+END
+
+CASE two_singles_pos3_plus_pos1
+NOTE pos3 | pos1. Split-pack 0b0101. Must record both packs.
+W 16
+H 3
+MAP
+................
+...X.X..........
 ................
 END
 

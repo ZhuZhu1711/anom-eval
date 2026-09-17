@@ -65,11 +65,8 @@ PairClassification classify_adjacent_packs(u8 left, u8 right) {
         return c;
     }
 
-    // Connected across the boundary.
-    const int union_n = nl + nr;
-    const bool leftover_complex = union_n >= 3 || l_cluster || r_cluster ||
-                                  (l_adj && r_adj) || (l_adj && nr >= 1) || (r_adj && nl >= 1);
-
+    // Connected across the boundary: DPC's preferred left same-channel
+    // source is occupied, so both packs must be recorded.
     if (l_cluster && (nr == 1) && !r_cluster)
         c.kind = PairKind::SinglePlusCluster;
     else if (r_cluster && (nl == 1) && !l_cluster)
@@ -87,11 +84,8 @@ PairClassification classify_adjacent_packs(u8 left, u8 right) {
     else
         c.kind = PairKind::OtherComplex;
 
-    // Oracle: record phase-2 clusters always; record leftovers only when they
-    // form a complex pattern with a neighboring cluster (not two DPC singles).
-    const bool promote_pair = leftover_complex && c.kind != PairKind::TwoSinglesConnected;
-    c.oracle_records_left = record_if_cluster_or_promoted(left, l_cluster, promote_pair);
-    c.oracle_records_right = record_if_cluster_or_promoted(right, r_cluster, promote_pair);
+    c.oracle_records_left = record_if_cluster_or_promoted(left, l_cluster, true);
+    c.oracle_records_right = record_if_cluster_or_promoted(right, r_cluster, true);
     return c;
 }
 
@@ -125,7 +119,7 @@ OracleResult run_oracle(const Image& src) {
         if (pack_is_phase2_cluster(masks[i])) o.type_map[i] = masks[i];
     }
 
-    // Promote leftovers that form a complex pattern with a neighbor cluster.
+    // Promote leftovers that same-channel-connect across a pack boundary.
     for (int pass = 0; pass < 4; ++pass) {
         bool changed = false;
         for (int y = 0; y < height; ++y) {
@@ -143,13 +137,8 @@ OracleResult run_oracle(const Image& src) {
                     const u8 L = self_is_left ? mask : nmask;
                     const u8 R = self_is_left ? nmask : mask;
                     if (!same_channel_connect(L, R)) return;
-                    const bool n_cluster = o.type_map[static_cast<size_t>(nidx)] != 0 ||
-                                           pack_is_phase2_cluster(nmask) ||
-                                           popcount4(nmask) >= 2;
-                    if (n_cluster || popcount4(mask) + popcount4(nmask) >= 3) {
-                        o.type_map[static_cast<size_t>(idx)] = mask;
-                        changed = true;
-                    }
+                    o.type_map[static_cast<size_t>(idx)] = mask;
+                    changed = true;
                 };
                 consider(g - 1, false);
                 if (o.type_map[static_cast<size_t>(idx)] == 0) consider(g + 1, true);

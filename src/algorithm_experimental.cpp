@@ -16,17 +16,15 @@ DetectResult run_experimental(const Image& src) {
 
     // Horizontal leftover pass (the fix).
     //
-    // Design:
-    // - Isolated singles pass (DPC).
-    // - Isolated adjacent doubles pass (DPC) — that skip is intentional.
-    // - A leftover 4-pack is recorded only when it same-channel-connects
-    //   (distance 2 across the pack boundary) to a neighboring *cluster*,
-    //   forming a more complex multi-defect pattern that DPC cannot remove.
-    //   Neighbor cluster = phase-2 type_map entry, or leftover pack with
-    //   2+ defects (the passed adjacent-double "cluster").
-    // - Two connected singles (union=2) stay unrecorded: each is still DPC.
-    // - The full leftover mask is written, so adjacent doubles next to a
-    //   cluster keep their real type (0b1100 / 0b0110 / 0b0011 / triples).
+    // DPC interpolates a dead pixel from the same-channel good pixel two
+    // steps to the left. A leftover 4-pack is recorded when it
+    // same-channel-connects (distance 2 across the pack boundary) to any
+    // neighboring leftover or cluster — including another leftover single.
+    // That geometry is the split-pack form of intra-pack 0b1010 / 0b0101:
+    // the right defect's preferred DPC source is itself dead.
+    // Isolated singles and isolated adjacent doubles (no such link) pass.
+    // The full leftover mask is written, so adjacent doubles keep 0b1100 /
+    // 0b0110 / 0b0011 / triples instead of being crushed to one bit.
     //
     // Original bugs this replaces:
     // 1. Only sum==255 was inspected, so leftover adjacent doubles next to
@@ -34,6 +32,7 @@ DetectResult run_experimental(const Image& src) {
     // 2. type_0100 omitted 0b1001, so a single at pos1 next to cluster
     //    0b1001 was missed.
     // 3. Matching used incomplete type sets instead of the partner bit.
+    // 4. loca+4 / loca+5 caught two connected singles on the left pack only.
 
     const int width = w.width;
     const int height = w.height;
@@ -55,21 +54,11 @@ DetectResult run_experimental(const Image& src) {
 
             if (j >= 4) {
                 const u8 prev = neighbor_pattern(k - 1, loca - 4);
-                if (same_channel_connect(prev, mask)) {
-                    const bool prev_cluster =
-                        w.type_map[static_cast<size_t>(k - 1)] != 0 || popcount4(prev) >= 2;
-                    if (prev_cluster || popcount4(mask) + popcount4(prev) >= 3)
-                        promote = true;
-                }
+                if (same_channel_connect(prev, mask)) promote = true;
             }
             if (!promote && j + 4 < width) {
                 const u8 next = neighbor_pattern(k + 1, loca + 4);
-                if (same_channel_connect(mask, next)) {
-                    const bool next_cluster =
-                        w.type_map[static_cast<size_t>(k + 1)] != 0 || popcount4(next) >= 2;
-                    if (next_cluster || popcount4(mask) + popcount4(next) >= 3)
-                        promote = true;
-                }
+                if (same_channel_connect(mask, next)) promote = true;
             }
 
             if (promote) {

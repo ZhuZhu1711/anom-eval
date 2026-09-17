@@ -28,7 +28,7 @@ enum class PairKind {
     AdjacentPlusCluster,     // leftover adjacent-pair pack connected to a cluster
     AdjacentPlusAdjacent,    // two leftover adjacent-pair packs connected
     SinglePlusAdjacent,      // leftover 1-defect pack connected to leftover adjacent
-    TwoSinglesConnected,     // two leftover singles, same-channel d=2 (DPC each)
+    TwoSinglesConnected,     // two leftover singles, same-channel d=2 (must record)
     OtherComplex
 };
 

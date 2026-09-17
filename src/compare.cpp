@@ -279,9 +279,10 @@ std::string render_text_report(const SuiteReport& coverage, const SuiteReport& m
     os << "==============================================\n\n";
     os << "Intent\n";
     os << "  Isolated singles and isolated adjacent doubles PASS (DPC).\n";
-    os << "  They must be recorded only when they same-channel-connect\n";
-    os << "  (distance 2 across a 4-pack boundary) to a neighboring cluster,\n";
-    os << "  forming a more complex pattern DPC cannot remove.\n\n";
+    os << "  Record leftovers that same-channel-connect (distance 2 across a\n";
+    os << "  4-pack boundary) to a neighbor leftover or cluster. DPC prefers\n";
+    os << "  the same-channel good pixel on the left; that source is then dead.\n";
+    os << "  Two connected singles (..X.X...) are the split-pack form of 0b1010.\n\n";
 
     auto dump_suite = [&](const SuiteReport& r) {
         os << r.title << "\n";
@@ -353,8 +354,9 @@ std::string render_html_report(const SuiteReport& coverage, const SuiteReport& m
     os << "</style></head><body>";
     os << "<h1>水平方向查点：对照组 vs 实验组</h1>";
     os << "<p>孤立单坏点和孤立水平相邻双坏点故意放过（DPC 可消）。";
-    os << "漏检来自它们和<strong>相邻簇</strong>拼成更复杂、DPC 去不掉的模式。";
-    os << "实验组只补这一类，不把两个可 DPC 的单点配成簇。</p>";
+    os << "跨组同通道、距离 2 相连时，DPC 要用的左边好点就是坏点，<strong>必须</strong>记簇。";
+    os << "这包括和相邻簇拼接，也包括两个隔组单点（几何上等于组内 <code>0b1010</code>）。";
+    os << "实验组按这条补水平查点，并写入完整 mask。</p>";
 
     auto suite_html = [&](const SuiteReport& r) {
         os << "<div class=\"card\"><h2>" << html_escape(r.title) << "</h2>";
@@ -362,7 +364,7 @@ std::string render_html_report(const SuiteReport& coverage, const SuiteReport& m
            << r.n_disagree << " · 大簇早退 " << r.n_big_dd << "</p>";
         os << "<p>相对 oracle 漏检：对照 <span class=\"bad\">" << r.n_control_miss
            << "</span> · 实验 <span class=\"ok\">" << r.n_experimental_miss
-           << "</span>；多检（含垂直、以及对照把两个 DPC 单点配上）对照 "
+           << "</span>；多检（含垂直）对照 "
            << r.n_control_extra << " · 实验 " << r.n_experimental_extra << "</p>";
         os << "<p class=\"muted\">耗时 对照 " << r.control_ms << " ms / 实验 "
            << r.experimental_ms << " ms</p>";
